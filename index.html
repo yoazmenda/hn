@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!-->
+<html class="no-js">
+<!--<![endif]-->
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Kite</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans&display=swap');
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #3f3f3f;
+            font-family: 'Open Sans', sans-serif;
+            overflow-y: scroll;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 98%;
+            padding: 0 30px;
+            margin: 2rem auto;
+        }
+        
+        .container h3,
+        p {
+            color: #fff;
+        }
+        
+        .container h3 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .container p {
+            font-size: 18px;
+            line-height: 1.5;
+        }
+        
+        .result {
+            background-color: #202020;
+            padding: 20px 25px;
+            border-radius: 5px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+        }
+        
+        .loader {
+            position: fixed;
+            bottom: 0;
+            padding: 1rem;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .loader.hidden {
+            display: none;
+        }
+        
+        .circle {
+            width: 20px;
+            height: 20px;
+            background-color: #fff;
+            border-radius: 50%;
+        }
+        
+        .circle:not(:last-child) {
+            margin-right: 1rem;
+        }
+        
+        .circle:nth-child(1) {
+            animation: hop 1s ease-in-out infinite;
+        }
+        
+        .circle:nth-child(2) {
+            animation: hop 1s ease-in-out infinite 0.1s;
+        }
+        
+        .circle:nth-child(3) {
+            animation: hop 1s ease-in-out infinite 0.2s;
+        }
+        
+        @keyframes hop {
+            0% {
+                transform: scale(1) translateY(0);
+            }
+            25% {
+                transform: scale(1.1) translateY(10px);
+            }
+            50% {
+                transform: scale(1.2) translateY(20px);
+            }
+            75% {
+                transform: scale(1.1) translateY(10px);
+            }
+            100% {
+                transform: scale(1) translateY(0px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="debug" style="position: fixed; color: orange;">
+
+    </div>
+
+    <div class="container"></div>
+    <div class="result loader hidden">
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+    </div>
+    <script>
+        let page = 1;
+        const BASE_URL = 'https://jsonplaceholder.typicode.com/posts';
+        const container = document.querySelector('.container');
+        const loader = document.querySelector('.loader');
+        const topStories = [];
+
+        function getData() {
+            loader.classList.remove('hidden');
+            fetch(`${BASE_URL}?_page=${page}&_limit=5`)
+                .then((response) => response.json())
+                .then((results) => drawResults(results));
+        }
+
+        function drawResults(results) {
+            let posts = [];
+            for (let i = 0; i < results.length; i++) {
+                posts.push(
+                    `
+                <div>
+                    <div class="result" style="background-size: cover; background-image: url(https://loremflickr.com/620/480?random=${results[i].id})">
+                    <h3>${results[i].title}</h3>
+                    <p>${results[i].body}</p>
+                </div>                           
+                `
+                )
+            }
+            page++;
+            loader.classList.add('hidden');
+            container.innerHTML += posts.join("");;
+        }
+
+        document.addEventListener('DOMContentLoaded', getData);
+        window.addEventListener('scroll', () => {
+            if (
+                document.documentElement.scrollTop +
+                document.documentElement.clientHeight >=
+                document.documentElement.scrollHeight
+            ) {
+                getData();
+            }
+        });
+    </script>
+</body>
+
+</html>
