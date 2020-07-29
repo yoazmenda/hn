@@ -116,6 +116,8 @@
 </head>
 
 <body>
+    <script src="./ImageResolver.0.6.0.js"></script>
+    <script src="./imageResolve.js"></script>
     <div id="debug" style="position: fixed; color: orange;">
 
     </div>
@@ -127,38 +129,79 @@
         <div class="circle"></div>
     </div>
     <script>
-        let page = 1;
-        const BASE_URL = 'https://jsonplaceholder.typicode.com/posts';
+        let page = 0;
+        const BASE_URL = 'https://hacker-news.firebaseio.com/v0/';
         const container = document.querySelector('.container');
         const loader = document.querySelector('.loader');
-        const topStories = [];
 
-        function getData() {
+        function getInitialData() {
             loader.classList.remove('hidden');
-            fetch(`${BASE_URL}?_page=${page}&_limit=5`)
+            fetch(`${BASE_URL}topstories.json`)
                 .then((response) => response.json())
-                .then((results) => drawResults(results));
+                .then((fetchedTopIds) => {
+                    topStories = fetchedTopIds;
+                    getData()
+                });
         }
 
-        function drawResults(results) {
-            let posts = [];
-            for (let i = 0; i < results.length; i++) {
-                posts.push(
-                    `
-                <div>
-                    <div class="result" style="background-size: cover; background-image: url(https://loremflickr.com/620/480?random=${results[i].id})">
-                    <h3>${results[i].title}</h3>
-                    <p>${results[i].body}</p>
-                </div>                           
-                `
-                )
+        let getData = async function() {
+            loader.classList.remove('hidden');
+            let completed = [false, false, false, false, false];
+            for (let i = 0; i < 5; i++) {
+                let response = await fetch(`${BASE_URL}item/${topStories[page * 5 + i]}.json`);
+                let item = await response.json();
+                addItem(item, completed, i);
             }
-            page++;
-            loader.classList.add('hidden');
-            container.innerHTML += posts.join("");;
+            let intervalHandler = setInterval(() => {
+                if (completed.filter((isCompleted) => !isCompleted).length == 0) {
+                    loader.classList.add('hidden');
+                    page++;
+                    clearInterval(intervalHandler);
+                }
+            }, 200);
+
+        };
+
+        let addItem = async function(item, completed, i) {
+            let proxify = function(request) {
+                request.url = "http://www.inertie.org/ba-simple-proxy.php?mode=native&url=" + encodeURIComponent(request.url);
+                return request;
+            }
+            let resolver = new ImageResolver({
+                requestPlugin: proxify
+            });
+            resolver.register(new ImageResolver.FileExtension());
+            resolver.register(new ImageResolver.MimeType());
+            resolver.register(new ImageResolver.Webpage());
+            resolver.resolve(item.url, function(result) {
+                let articleImageURL = `./img/cat.jpg`;
+                if (result) {
+                    console.log(`Resolved: ${item.url}`);
+                    articleImageURL = result.image;
+                } else {
+                    console.log(`Not Resolved: ${item.url}`);
+                }
+                let img = new Image();
+                img.onload = function() {
+                    completed[i] = true;
+                }
+                img.src = articleImageURL;
+                if (img.complete) img.onload();
+                let newItem = `
+            <div>
+                <div class="result" style="background-size: cover; background-image: url(${articleImageURL})">
+                <h3>${item.title}</h3>
+                <p>Score ${item.score}</p>
+            </div>
+            `
+                console.log(`adding: ${item.url}`);
+                container.innerHTML += newItem;
+            });
         }
 
-        document.addEventListener('DOMContentLoaded', getData);
+
+
+        document.addEventListener('DOMContentLoaded', getInitialData);
         window.addEventListener('scroll', () => {
             if (
                 document.documentElement.scrollTop +
@@ -168,6 +211,41 @@
                 getData();
             }
         });
+
+        function getImageBrightness(imageSrc, callback) {
+            var img = document.createElement("img");
+            img.src = imageSrc;
+            img.style.display = "none";
+            document.body.appendChild(img);
+
+            var colorSum = 0;
+
+            img.onload = function() {
+                // create canvas
+                var canvas = document.createElement("canvas");
+                canvas.width = this.width;
+                canvas.height = this.height;
+
+                var ctx = canvas.getContext("2d");
+                ctx.drawImage(this, 0, 0);
+
+                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                var data = imageData.data;
+                var r, g, b, avg;
+
+                for (var x = 0, len = data.length; x < len; x += 4) {
+                    r = data[x];
+                    g = data[x + 1];
+                    b = data[x + 2];
+
+                    avg = Math.floor((r + g + b) / 3);
+                    colorSum += avg;
+                }
+
+                var brightness = Math.floor(colorSum / (this.width * this.height));
+                callback(brightness);
+            }
+        }
     </script>
 </body>
 
