@@ -71,7 +71,7 @@
 
         function registerImageResolver() {
             let proxify = function(request) {
-                request.url = "http://www.inertie.org/ba-simple-proxy.php?mode=native&url=" + encodeURIComponent(request.url);
+                request.url = "https://www.inertie.org/ba-simple-proxy.php?mode=native&url=" + encodeURIComponent(request.url);
                 return request;
             }
             let resolver = new ImageResolver({
