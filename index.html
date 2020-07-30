@@ -54,6 +54,7 @@
                 if (typeof item.url !== 'string') {
                     item.url = `https://news.ycombinator.com/item?id=${item.id}`;
                 }
+                item.url = item.url.replace("http://", "https://");
                 addItem(item, completed, i);
 
 
