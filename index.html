@@ -95,37 +95,6 @@
                 img.crossOrigin = "Anonymous";
                 document.body.appendChild(img);
                 img.onload = function() {
-                    let colorSum = 0;
-                    let canvas = document.createElement("canvas");
-                    canvas.width = this.width;
-                    canvas.height = this.height;
-
-                    let ctx = canvas.getContext("2d");
-                    ctx.drawImage(this, 0, 0);
-
-                    let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    let data = imageData.data;
-                    let r, g, b, avg;
-
-                    for (let x = 0, len = data.length; x < len; x += 4) {
-                        r = data[x];
-                        g = data[x + 1];
-                        b = data[x + 2];
-
-                        avg = Math.floor((r + g + b) / 3);
-                        colorSum += avg;
-                    }
-                    let brightness = Math.floor(colorSum / (this.width * this.height));
-                    let node = document.getElementById(`${item.id}`);
-                    if (node != null) {
-                        console.log(`Brightness: ${brightness}`);
-                        if (brightness > 100) {
-                            node.classList.add('light');
-                            node.innerHTML += `<p>Brightnewss: ${brightness}</p>`;
-                        } else {
-                            node.classList.add('dark');
-                        }
-                    }
                     completed[i] = true;
                 }
                 img.onerror = (err) => {
@@ -134,10 +103,13 @@
                 img.src = articleImageURL;
                 if (img.complete) img.onload();
                 let newItem = `
-            <div>
-                <div id=${item.id} class="result" style="background-size: cover; background-image: url(${articleImageURL})">
-                <h3>${item.title}</h3>
-                <p>Score ${item.score}</p>
+            <div id=${item.id} class="result" onclick="window.location='${item.url}';">
+                <div class="articleImage" style="background-image: url(${articleImageURL})"></div>
+                <div>
+                    <h3>${item.title}</h3>
+                    <p>Score ${item.score} Comments: ${item.descendants}</p>
+                </div>
+                
             </div>
             `
                 container.innerHTML += newItem;
