@@ -12,107 +12,7 @@
     <title>Kite</title>
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Open+Sans&display=swap');
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            background-color: #3f3f3f;
-            font-family: 'Open Sans', sans-serif;
-            overflow-y: scroll;
-            overflow-x: hidden;
-        }
-        
-        .container {
-            max-width: 98%;
-            padding: 0 30px;
-            margin: 2rem auto;
-        }
-        
-        .container h3,
-        p {
-            color: #fff;
-        }
-        
-        .container h3 {
-            font-size: 24px;
-            margin-bottom: 5px;
-        }
-        
-        .container p {
-            font-size: 18px;
-            line-height: 1.5;
-        }
-        
-        .result {
-            background-color: #202020;
-            padding: 20px 25px;
-            border-radius: 5px;
-            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5);
-            margin-bottom: 20px;
-        }
-        
-        .loader {
-            position: fixed;
-            bottom: 0;
-            padding: 1rem;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-        
-        .loader.hidden {
-            display: none;
-        }
-        
-        .circle {
-            width: 20px;
-            height: 20px;
-            background-color: #fff;
-            border-radius: 50%;
-        }
-        
-        .circle:not(:last-child) {
-            margin-right: 1rem;
-        }
-        
-        .circle:nth-child(1) {
-            animation: hop 1s ease-in-out infinite;
-        }
-        
-        .circle:nth-child(2) {
-            animation: hop 1s ease-in-out infinite 0.1s;
-        }
-        
-        .circle:nth-child(3) {
-            animation: hop 1s ease-in-out infinite 0.2s;
-        }
-        
-        @keyframes hop {
-            0% {
-                transform: scale(1) translateY(0);
-            }
-            25% {
-                transform: scale(1.1) translateY(10px);
-            }
-            50% {
-                transform: scale(1.2) translateY(20px);
-            }
-            75% {
-                transform: scale(1.1) translateY(10px);
-            }
-            100% {
-                transform: scale(1) translateY(0px);
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>
@@ -133,6 +33,7 @@
         const BASE_URL = 'https://hacker-news.firebaseio.com/v0/';
         const container = document.querySelector('.container');
         const loader = document.querySelector('.loader');
+        const resolver = registerImageResolver();
 
         function getInitialData() {
             loader.classList.remove('hidden');
@@ -150,7 +51,12 @@
             for (let i = 0; i < 5; i++) {
                 let response = await fetch(`${BASE_URL}item/${topStories[page * 5 + i]}.json`);
                 let item = await response.json();
+                if (typeof item.url !== 'string') {
+                    item.url = `https://news.ycombinator.com/item?id=${item.id}`;
+                }
                 addItem(item, completed, i);
+
+
             }
             let intervalHandler = setInterval(() => {
                 if (completed.filter((isCompleted) => !isCompleted).length == 0) {
@@ -162,7 +68,7 @@
 
         };
 
-        let addItem = async function(item, completed, i) {
+        function registerImageResolver() {
             let proxify = function(request) {
                 request.url = "http://www.inertie.org/ba-simple-proxy.php?mode=native&url=" + encodeURIComponent(request.url);
                 return request;
@@ -173,33 +79,70 @@
             resolver.register(new ImageResolver.FileExtension());
             resolver.register(new ImageResolver.MimeType());
             resolver.register(new ImageResolver.Webpage());
+            return resolver;
+        }
+
+        let addItem = async function(item, completed, i) {
             resolver.resolve(item.url, function(result) {
                 let articleImageURL = `./img/cat.jpg`;
                 if (result) {
-                    console.log(`Resolved: ${item.url}`);
                     articleImageURL = result.image;
-                } else {
-                    console.log(`Not Resolved: ${item.url}`);
-                }
+                } else {}
                 let img = new Image();
+                let defaultImageStyle = img.style.display;
+                img.style.display = "none";
+
+                img.crossOrigin = "Anonymous";
+                document.body.appendChild(img);
                 img.onload = function() {
+                    let colorSum = 0;
+                    let canvas = document.createElement("canvas");
+                    canvas.width = this.width;
+                    canvas.height = this.height;
+
+                    let ctx = canvas.getContext("2d");
+                    ctx.drawImage(this, 0, 0);
+
+                    let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    let data = imageData.data;
+                    let r, g, b, avg;
+
+                    for (let x = 0, len = data.length; x < len; x += 4) {
+                        r = data[x];
+                        g = data[x + 1];
+                        b = data[x + 2];
+
+                        avg = Math.floor((r + g + b) / 3);
+                        colorSum += avg;
+                    }
+                    let brightness = Math.floor(colorSum / (this.width * this.height));
+                    let node = document.getElementById(`${item.id}`);
+                    if (node != null) {
+                        console.log(`Brightness: ${brightness}`);
+                        if (brightness > 100) {
+                            node.classList.add('light');
+                            node.innerHTML += `<p>Brightnewss: ${brightness}</p>`;
+                        } else {
+                            node.classList.add('dark');
+                        }
+                    }
                     completed[i] = true;
                 }
+                img.onerror = (err) => {
+                    img.src = `./img/cat.jpg`;
+                };
                 img.src = articleImageURL;
                 if (img.complete) img.onload();
                 let newItem = `
             <div>
-                <div class="result" style="background-size: cover; background-image: url(${articleImageURL})">
+                <div id=${item.id} class="result" style="background-size: cover; background-image: url(${articleImageURL})">
                 <h3>${item.title}</h3>
                 <p>Score ${item.score}</p>
             </div>
             `
-                console.log(`adding: ${item.url}`);
                 container.innerHTML += newItem;
             });
         }
-
-
 
         document.addEventListener('DOMContentLoaded', getInitialData);
         window.addEventListener('scroll', () => {
@@ -211,41 +154,6 @@
                 getData();
             }
         });
-
-        function getImageBrightness(imageSrc, callback) {
-            var img = document.createElement("img");
-            img.src = imageSrc;
-            img.style.display = "none";
-            document.body.appendChild(img);
-
-            var colorSum = 0;
-
-            img.onload = function() {
-                // create canvas
-                var canvas = document.createElement("canvas");
-                canvas.width = this.width;
-                canvas.height = this.height;
-
-                var ctx = canvas.getContext("2d");
-                ctx.drawImage(this, 0, 0);
-
-                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                var data = imageData.data;
-                var r, g, b, avg;
-
-                for (var x = 0, len = data.length; x < len; x += 4) {
-                    r = data[x];
-                    g = data[x + 1];
-                    b = data[x + 2];
-
-                    avg = Math.floor((r + g + b) / 3);
-                    colorSum += avg;
-                }
-
-                var brightness = Math.floor(colorSum / (this.width * this.height));
-                callback(brightness);
-            }
-        }
     </script>
 </body>
 
